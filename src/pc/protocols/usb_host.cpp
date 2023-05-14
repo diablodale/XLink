@@ -1067,6 +1067,7 @@ int usbPlatformWrite(void *fdKey, void *data, int size)
 #include <usbiodef.h>
 #pragma comment(lib, "setupapi.lib")
 #include <setupapi.h>
+#include <vector>
 
 // get MxId given the vidpid and libusb device (Windows only)
 // Uses the Win32 SetupDI* apis. Several cautions:
