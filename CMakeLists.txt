@@ -11,6 +11,11 @@ HunterGate(
     LOCAL # Local config for dependencies
 )
 
+# chain vcpkg when present
+if (DEFINED ENV{VCPKG_ROOT})
+    include("$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+endif()
+
 ### Constants
 set(TARGET_NAME "XLink")
 set(TARGET_PUBLIC_NAME "XLinkPublic")
@@ -36,6 +41,8 @@ option(XLINK_BUILD_TESTS "Build XLink tests" OFF)
 set(XLINK_LIBUSB_LOCAL "" CACHE STRING "Path to local libub source to use instead of Hunter")
 # Debug option
 option(XLINK_LIBUSB_SYSTEM "Use system libusb library instead of Hunter" OFF)
+# Debug option
+set(XLINK_LIBUSB_TARGET_NAME "usb-1.0" CACHE STRING "Target name for libusb; used in cmake package search")
 
 if(XLINK_LIBUSB_LOCAL AND XLINK_LIBUSB_SYSTEM)
     message(FATAL_ERROR "XLINK_LIBUSB_LOCAL and XLINK_LIBUSB_SYSTEM options are mutually exclusive!")
@@ -72,6 +79,34 @@ if(XLINK_LIBUSB_SYSTEM)
         PUBLIC ${LIBUSB_LIBRARY}
     )
 else()
+    if(NOT TARGET usb-1.0)
+        # create import target for libusb using vcpkg defined variables
+        add_library(usb-1.0 SHARED IMPORTED)
+        if (CMAKE_IMPORT_LIBRARY_SUFFIX)
+            # split lib+dll platform
+            set_target_properties(usb-1.0 PROPERTIES
+                IMPORTED_LOCATION_RELEASE "${LIBUSB_INCLUDE_DIR}/../../bin/libusb-1.0.dll"
+                IMPORTED_LOCATION_DEBUG   "${LIBUSB_INCLUDE_DIR}/../../debug/bin/libusb-1.0.dll"
+                IMPORTED_IMPLIB_RELEASE   "${LIBUSB_LIBRARY_RELEASE}" #lib file
+                IMPORTED_IMPLIB_DEBUG     "${LIBUSB_LIBRARY_DEBUG}"   #lib file
+                MAP_IMPORTED_CONFIG_MINSIZEREL Release
+                MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
+            )
+        else()
+            set_target_properties(usb-1.0 PROPERTIES
+                IMPORTED_LOCATION_RELEASE ${LIBUSB_LIBRARY_RELEASE}
+                IMPORTED_LOCATION_DEBUG   ${LIBUSB_LIBRARY_DEBUG}
+                MAP_IMPORTED_CONFIG_MINSIZEREL Release
+                MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
+            )
+        endif()
+        target_include_directories(usb-1.0 INTERFACE
+            "${LIBUSB_INCLUDE_DIR}/.."
+            #$<BUILD_INTERFACE:${LIBUSB_INCLUDE_DIR}/..>
+            #$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        )
+    endif()
+
     # Link to CMake libusb
     target_link_libraries(${TARGET_NAME} PRIVATE usb-1.0)
     if(WIN32 AND NOT MINGW)
