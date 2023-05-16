@@ -19,6 +19,34 @@ elseif(NOT XLINK_LIBUSB_SYSTEM)
     find_package(${XLINK_LIBUSB_TARGET_NAME} ${_QUIET} CONFIG REQUIRED HINTS "${CMAKE_CURRENT_LIST_DIR}/libusb")
 endif()
 
+if(NOT TARGET ${XLINK_LIBUSB_TARGET_NAME})
+    # create import target for libusb using vcpkg defined variables
+    add_library(${XLINK_LIBUSB_TARGET_NAME} SHARED IMPORTED)
+    if (CMAKE_IMPORT_LIBRARY_SUFFIX)
+        # split lib+sharedbin platform
+        set_target_properties(${XLINK_LIBUSB_TARGET_NAME} PROPERTIES
+            IMPORTED_LOCATION_RELEASE "${LIBUSB_INCLUDE_DIR}/../../bin/libusb-1.0.dll"
+            IMPORTED_LOCATION_DEBUG   "${LIBUSB_INCLUDE_DIR}/../../debug/bin/libusb-1.0.dll"
+            IMPORTED_IMPLIB_RELEASE   "${LIBUSB_LIBRARY_RELEASE}" #lib file
+            IMPORTED_IMPLIB_DEBUG     "${LIBUSB_LIBRARY_DEBUG}"   #lib file
+            MAP_IMPORTED_CONFIG_MINSIZEREL Release
+            MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
+        )
+    else()
+        set_target_properties(${XLINK_LIBUSB_TARGET_NAME} PROPERTIES
+            IMPORTED_LOCATION_RELEASE ${LIBUSB_LIBRARY_RELEASE}
+            IMPORTED_LOCATION_DEBUG   ${LIBUSB_LIBRARY_DEBUG}
+            MAP_IMPORTED_CONFIG_MINSIZEREL Release
+            MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
+        )
+    endif()
+    target_include_directories(${XLINK_LIBUSB_TARGET_NAME} INTERFACE
+        "${LIBUSB_INCLUDE_DIR}/.."
+        #$<BUILD_INTERFACE:${LIBUSB_INCLUDE_DIR}/..>
+        #$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
+endif()
+
 # Add threads (c++)
 find_package(Threads ${_QUIET} REQUIRED)
 

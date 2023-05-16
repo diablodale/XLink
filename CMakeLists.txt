@@ -76,43 +76,26 @@ if(XLINK_LIBUSB_SYSTEM)
         PRIVATE "${LIBUSB_INCLUDE_DIR}"
     )
     target_link_libraries(${TARGET_NAME}
-        PUBLIC ${LIBUSB_LIBRARY}
+        PRIVATE ${LIBUSB_LIBRARY}
     )
 else()
-    if(NOT TARGET usb-1.0)
-        # create import target for libusb using vcpkg defined variables
-        add_library(usb-1.0 SHARED IMPORTED)
-        if (CMAKE_IMPORT_LIBRARY_SUFFIX)
-            # split lib+dll platform
-            set_target_properties(usb-1.0 PROPERTIES
-                IMPORTED_LOCATION_RELEASE "${LIBUSB_INCLUDE_DIR}/../../bin/libusb-1.0.dll"
-                IMPORTED_LOCATION_DEBUG   "${LIBUSB_INCLUDE_DIR}/../../debug/bin/libusb-1.0.dll"
-                IMPORTED_IMPLIB_RELEASE   "${LIBUSB_LIBRARY_RELEASE}" #lib file
-                IMPORTED_IMPLIB_DEBUG     "${LIBUSB_LIBRARY_DEBUG}"   #lib file
-                MAP_IMPORTED_CONFIG_MINSIZEREL Release
-                MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
-            )
-        else()
-            set_target_properties(usb-1.0 PROPERTIES
-                IMPORTED_LOCATION_RELEASE ${LIBUSB_LIBRARY_RELEASE}
-                IMPORTED_LOCATION_DEBUG   ${LIBUSB_LIBRARY_DEBUG}
-                MAP_IMPORTED_CONFIG_MINSIZEREL Release
-                MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
-            )
-        endif()
-        target_include_directories(usb-1.0 INTERFACE
-            "${LIBUSB_INCLUDE_DIR}/.."
-            #$<BUILD_INTERFACE:${LIBUSB_INCLUDE_DIR}/..>
-            #$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        )
-    endif()
-
     # Link to CMake libusb
-    target_link_libraries(${TARGET_NAME} PRIVATE usb-1.0)
+    target_link_libraries(${TARGET_NAME} PRIVATE ${XLINK_LIBUSB_TARGET_NAME})
     if(WIN32 AND NOT MINGW)
         target_link_libraries(${TARGET_NAME} PRIVATE delayimp.lib Pathcch.lib)
+
+        # TODO investigate rename or use DEBUG_POSTFIX
+        if (CMAKE_BUILD_TYPE)
+            string(TOUPPER "${CMAKE_BUILD_TYPE}" _UPPER_BT)
+            get_target_property(LIBUSB_DLL_PATH ${XLINK_LIBUSB_TARGET_NAME} IMPORTED_LOCATION_${_UPPER_BT})
+            unset(_UPPER_BT)
+        else()
+            get_target_property(LIBUSB_DLL_PATH ${XLINK_LIBUSB_TARGET_NAME} IMPORTED_LOCATION)
+        endif()
+        get_filename_component(LIBUSB_DLL ${LIBUSB_DLL_PATH} NAME)
+
         # workaround https://gitlab.kitware.com/cmake/cmake/-/issues/20022
-        target_link_options(${TARGET_NAME} PUBLIC "$<LINK_ONLY:/DELAYLOAD:libusb-1.0$<$<CONFIG:Debug>:d>.dll>")
+        target_link_options(${TARGET_NAME} PUBLIC "$<LINK_ONLY:/DELAYLOAD:${LIBUSB_DLL}>")
     endif()
 endif()
 
@@ -255,12 +238,22 @@ install(
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
+
 #Install include folder
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
 # Install Hunter dependencies
-if(NOT XLINK_LIBUSB_LOCAL AND NOT XLINK_LIBUSB_SYSTEM)
+if(NOT XLINK_LIBUSB_LOCAL AND NOT XLINK_LIBUSB_SYSTEM AND HUNTER_INSTALL_PREFIX)
     install(DIRECTORY "${HUNTER_INSTALL_PREFIX}/" DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}/dependencies")
 endif()
+
+install(
+    IMPORTED_RUNTIME_ARTIFACTS ${XLINK_LIBUSB_TARGET_NAME}
+    #TODO investigate RUNTIME_DEPENDENCY_SET
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+)
+
 # Install export group (information about targets)
 install(EXPORT ${PROJECT_EXPORT_GROUP}
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
