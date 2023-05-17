@@ -104,7 +104,7 @@ static std::unordered_map<VidPid, XLinkDeviceState_t, pair_hash> vidPidToDeviceS
 
 static std::string getLibusbDevicePath(libusb_device *dev);
 static libusb_error getLibusbDeviceMxId(XLinkDeviceState_t state, std::string devicePath, const libusb_device_descriptor* pDesc, libusb_device *dev, std::string& outMxId);
-static const char* xlink_libusb_strerror(ssize_t x);
+static const char* xlink_libusb_strerror(ssize_t);
 #ifdef _WIN32
 std::string getWinUsbMxId(VidPid vidpid, libusb_device* dev);
 #endif
@@ -114,8 +114,13 @@ extern "C" xLinkPlatformErrorCode_t getUSBDevices(const deviceDesc_t in_deviceRe
                                                      unsigned int *out_amountOfFoundDevices) {
     // Get list of usb devices
     std::lock_guard<std::mutex> l(mutex);
-    const auto deviceList = LibusbDeviceList::create(context);
-    if(!deviceList) {
+    LibusbDeviceList deviceList;
+    try {
+        deviceList = LibusbDeviceList(context);
+    }
+    catch(const std::exception&) {
+        // this try/catch can be larger and surround the whole function
+        // LibusbDeviceList has already logged with mvLog
         return X_LINK_PLATFORM_ERROR;
     }
 
@@ -123,7 +128,7 @@ extern "C" xLinkPlatformErrorCode_t getUSBDevices(const deviceDesc_t in_deviceRe
     const std::string requiredName(in_deviceRequirements.name);
     const std::string requiredMxId(in_deviceRequirements.mxid);
     int numDevicesFound = 0;
-    for (auto* const usbDevice : *deviceList) {
+    for (auto* const usbDevice : deviceList) {
         if(usbDevice == nullptr) continue;
         if(numDevicesFound >= sizeFoundDevices){
             break;

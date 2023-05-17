@@ -11,8 +11,10 @@
 #include <iterator>
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <system_error>
 
-static const char *xlink_libusb_strerror(ssize_t x);
+static const char *xlink_libusb_strerror(ssize_t);
 
 // TEMPLATE WRAPPERS
 template<typename T, void(*FreeFunc)(T*)>
@@ -44,7 +46,7 @@ public:
             //const auto result = std::unique_ptr<LibusbDeviceList>(new LibusbDeviceList());
             const auto rcNum = libusb_get_device_list(context, &result->deviceList);
             if (rcNum < 0 || result->deviceList == nullptr) {
-                mvLog(MVLOG_WARN, "Unable to get USB device list: %s", xlink_libusb_strerror(rcNum));
+                mvLog(MVLOG_ERROR, "Unable to get USB device list: %s", xlink_libusb_strerror(rcNum));
                 result.reset();
             }
             else {
@@ -52,22 +54,39 @@ public:
             }
         }
         else {
-            mvLog(MVLOG_WARN, "Unable to allocate memory for USB device list");
+            mvLog(MVLOG_ERROR, "Unable to allocate memory for USB device list");
         }
         return result;
     }
 
-    // constructors, destructor, copy, move
+    // default constructors, destructor, copy, move
     LibusbDeviceList() = default; // could be private by create() using `new LibusbDeviceList()`
     ~LibusbDeviceList() noexcept {
-        if (deviceList) {
+        if (deviceList != nullptr) {
             libusb_free_device_list(deviceList, 1);
         }
     }
     LibusbDeviceList(const LibusbDeviceList&) = delete;
     LibusbDeviceList& operator=(const LibusbDeviceList&) = delete;
-    LibusbDeviceList(LibusbDeviceList&&) = delete;
-    LibusbDeviceList& operator=(LibusbDeviceList&&) = delete;
+    LibusbDeviceList(LibusbDeviceList&& other) noexcept :
+        countDevices{std::exchange(other.countDevices, 0)},
+        deviceList{std::exchange(other.deviceList, nullptr)} {};
+    LibusbDeviceList& operator=(LibusbDeviceList&& other) noexcept {
+        if (this == &other)
+            return *this;
+        countDevices = std::exchange(other.countDevices, 0);
+        deviceList = std::exchange(other.deviceList, nullptr);
+        return *this;
+    }
+
+    explicit LibusbDeviceList(libusb_context* context) {
+        const auto rcNum = libusb_get_device_list(context, &deviceList);
+        if (rcNum < 0 || deviceList == nullptr) {
+            mvLog(MVLOG_ERROR, "Unable to get USB device list: %s", xlink_libusb_strerror(rcNum));
+            throw std::system_error(std::error_code(static_cast<int>(rcNum), std::system_category()), std::string("Unable to get USB device list: ").append(xlink_libusb_strerror(rcNum)));
+        }
+        countDevices = static_cast<size_type>(rcNum);
+    }
 
     // container interface
     // ideas from https://en.cppreference.com/w/cpp/named_req/SequenceContainer
@@ -157,6 +176,6 @@ public:
     }
 
 private:
-    pointer deviceList{nullptr};
     size_type countDevices{0};
+    pointer deviceList{nullptr};
 };
