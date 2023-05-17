@@ -10,7 +10,7 @@
 
 #include "string.h"
 
-static double steady_seconds()
+static double steady_seconds() noexcept
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -59,19 +59,19 @@ static constexpr uint8_t mxid_read_end_cmd[] = {
     0x9A, 0x9C, 0x00, 0x32, 0x20, 0xFF, 0xFF, 0xFF, 0xFF,
 };
 
-const uint8_t* usb_mx_id_get_payload() {
+const uint8_t* usb_mx_id_get_payload() noexcept {
     return mxid_read_cmd;
 }
 
-int usb_mx_id_get_payload_size() {
+int usb_mx_id_get_payload_size() noexcept {
     return sizeof(mxid_read_cmd);
 }
 
-const uint8_t* usb_mx_id_get_payload_end() {
+const uint8_t* usb_mx_id_get_payload_end() noexcept {
     return mxid_read_end_cmd;
 }
 
-int usb_mx_id_get_payload_end_size() {
+int usb_mx_id_get_payload_end_size() noexcept {
     return sizeof(mxid_read_end_cmd);
 }
 
@@ -86,7 +86,7 @@ typedef struct {
 } MxIdListEntry;
 static MxIdListEntry list_mx_id[MX_ID_LIST_SIZE] = { 0 };
 
-static bool list_mx_id_is_entry_valid(MxIdListEntry* entry) {
+static bool list_mx_id_is_entry_valid(MxIdListEntry* entry) noexcept {
     if (entry == NULL) return false;
     if (entry->compat_name[0] == 0 || steady_seconds() - entry->timestamp >= LIST_ENTRY_TIMEOUT_SEC) return false;
 
@@ -94,7 +94,7 @@ static bool list_mx_id_is_entry_valid(MxIdListEntry* entry) {
     return true;
 }
 
-void usb_mx_id_cache_init() {
+void usb_mx_id_cache_init() noexcept {
     // initialize list
     for (int i = 0; i < MX_ID_LIST_SIZE; i++) {
         list_mx_id[i].timestamp = 0;
@@ -103,7 +103,7 @@ void usb_mx_id_cache_init() {
     }
 }
 
-int usb_mx_id_cache_store_entry(const char* mx_id, const char* compat_addr) {
+int usb_mx_id_cache_store_entry(const char* mx_id, const char* compat_addr) noexcept {
     for (int i = 0; i < MX_ID_LIST_SIZE; i++) {
         // If entry an invalid (timedout - default)
         if (!list_mx_id_is_entry_valid(&list_mx_id[i])) {
@@ -116,7 +116,7 @@ int usb_mx_id_cache_store_entry(const char* mx_id, const char* compat_addr) {
     return -1;
 }
 
-bool usb_mx_id_cache_get_entry(const char* compat_addr, char* mx_id) {
+bool usb_mx_id_cache_get_entry(const char* compat_addr, char* mx_id) noexcept {
     for (int i = 0; i < MX_ID_LIST_SIZE; i++) {
         // If entry still valid
         if (list_mx_id_is_entry_valid(&list_mx_id[i])) {
