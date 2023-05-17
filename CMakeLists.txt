@@ -159,17 +159,19 @@ endif()
 # Set C99 standard
 set_property(TARGET ${TARGET_NAME} PROPERTY C_STANDARD 99)
 # Set compiler features (c++11), and disables extensions (g++11)
-set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 11)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 14)
 set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 set_property(TARGET ${TARGET_NAME} PROPERTY CXX_EXTENSIONS OFF)
 # Add interface transitive property (C++11) to public library
 if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
     target_compile_features(${TARGET_PUBLIC_NAME} INTERFACE cxx_range_for)
 else()
-    target_compile_features(${TARGET_PUBLIC_NAME} INTERFACE cxx_std_11)
+    target_compile_features(${TARGET_PUBLIC_NAME} INTERFACE cxx_std_14)
 endif()
 
 # Add flags
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+string(REGEX REPLACE " /W[0-4]" " /W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 add_default_flags(${TARGET_NAME})
 
 # Check if pthread_getname_np exists
