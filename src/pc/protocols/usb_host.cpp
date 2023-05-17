@@ -83,8 +83,9 @@ int usbInitialize(void* options){
 
     #if defined(_WIN32) && defined(_MSC_VER)
         return usbInitialize_customdir((void**)&context);
+    #else
+        return libusb_init(&context);
     #endif
-    return libusb_init(&context);
 }
 
 struct pair_hash {
@@ -657,7 +658,6 @@ xLinkPlatformErrorCode_t usbLinkOpen(const char *path, libusb_device_handle*& h)
         return X_LINK_PLATFORM_INVALID_PARAMETERS;
     }
 
-    usbBootError_t rc = USB_BOOT_DEVICE_NOT_FOUND;
     h = nullptr;
     libusb_device *dev = nullptr;
     bool found = false;
