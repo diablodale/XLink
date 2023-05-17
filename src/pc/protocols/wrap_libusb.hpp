@@ -12,7 +12,7 @@
 #include <memory>
 #include <stdexcept>
 
-extern const char *xlink_libusb_strerror(ssize_t x);
+static const char *xlink_libusb_strerror(ssize_t x);
 
 // TEMPLATE WRAPPERS
 template<typename T, void(*FreeFunc)(T*)>
@@ -37,15 +37,23 @@ using unique_libusb_device_list = unique_resource_ptr<libusb_device*, libusb_fre
 class LibusbDeviceList;
 class LibusbDeviceList {
 public:
-    static std::unique_ptr<LibusbDeviceList> create(libusb_context* context) {
+    static std::unique_ptr<LibusbDeviceList> create(libusb_context* context) noexcept {
+        static_assert(std::is_nothrow_constructible_v<LibusbDeviceList>, "LibusbDeviceList() errantly throws");
         auto result = std::make_unique<LibusbDeviceList>();
-        //const auto result = std::unique_ptr<LibusbDeviceList>(new LibusbDeviceList());
-        const auto rcNum = libusb_get_device_list(context, &result->deviceList);
-        if (rcNum < 0 || result->deviceList == nullptr) {
-            mvLog(MVLOG_WARN, "Unable to get USB device list: %s", xlink_libusb_strerror(rcNum));
-            return nullptr;
+        if (result) {
+            //const auto result = std::unique_ptr<LibusbDeviceList>(new LibusbDeviceList());
+            const auto rcNum = libusb_get_device_list(context, &result->deviceList);
+            if (rcNum < 0 || result->deviceList == nullptr) {
+                mvLog(MVLOG_WARN, "Unable to get USB device list: %s", xlink_libusb_strerror(rcNum));
+                result.reset();
+            }
+            else {
+                result->countDevices = static_cast<size_type>(rcNum);
+            }
         }
-        result->countDevices = static_cast<size_type>(rcNum);
+        else {
+            mvLog(MVLOG_WARN, "Unable to allocate memory for USB device list");
+        }
         return result;
     }
 
