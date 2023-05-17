@@ -9,8 +9,6 @@
 #endif
 
 #include "string.h"
-#include <chrono>
-#include <mutex>
 
 static double steady_seconds()
 {
@@ -22,7 +20,7 @@ static double steady_seconds()
 #define ADDRESS_BUFF_SIZE 35
 
 // Commands and executable to read serial number from unbooted MX device
-static const uint8_t mxid_read_cmd[] = {
+static constexpr uint8_t mxid_read_cmd[] = {
     // Header
     0x4d, 0x41, 0x32, 0x78,
     // WD Protection - start
@@ -54,7 +52,7 @@ static const uint8_t mxid_read_cmd[] = {
 };
 
 // WD Protection - end
-static const uint8_t mxid_read_end_cmd[] = {
+static constexpr uint8_t mxid_read_end_cmd[] = {
     0x9A, 0xA8, 0x00, 0x32, 0x20, 0xAD, 0xDE, 0xD0, 0xF1,
     0x9A, 0xA4, 0x00, 0x32, 0x20, 0x00, 0x00, 0x00, 0x00,
     0x9A, 0xA8, 0x00, 0x32, 0x20, 0xAD, 0xDE, 0xD0, 0xF1,
@@ -87,8 +85,6 @@ typedef struct {
     double timestamp;
 } MxIdListEntry;
 static MxIdListEntry list_mx_id[MX_ID_LIST_SIZE] = { 0 };
-static bool list_initialized = false;
-static std::mutex list_mutex;
 
 static bool list_mx_id_is_entry_valid(MxIdListEntry* entry) {
     if (entry == NULL) return false;
@@ -100,13 +96,10 @@ static bool list_mx_id_is_entry_valid(MxIdListEntry* entry) {
 
 void usb_mx_id_cache_init() {
     // initialize list
-    if (!list_initialized) {
-        for (int i = 0; i < MX_ID_LIST_SIZE; i++) {
-            list_mx_id[i].timestamp = 0;
-            list_mx_id[i].mx_id[0] = 0;
-            list_mx_id[i].compat_name[0] = 0;
-        }
-        list_initialized = true;
+    for (int i = 0; i < MX_ID_LIST_SIZE; i++) {
+        list_mx_id[i].timestamp = 0;
+        list_mx_id[i].mx_id[0] = 0;
+        list_mx_id[i].compat_name[0] = 0;
     }
 }
 
