@@ -7,7 +7,7 @@ if(CONFIG_MODE)
     set(_QUIET "QUIET")
 else()
     # set(XLINK_SHARED_LIBS ${BUILD_SHARED_LIBS})
-    if(NOT XLINK_LIBUSB_LOCAL AND NOT XLINK_LIBUSB_SYSTEM)
+    if(NOT XLINK_LIBUSB_LOCAL AND NOT XLINK_LIBUSB_SYSTEM AND NOT XLINK_LIBUSB_CUSTOM_TARGET)
         hunter_add_package(libusb-luxonis)
     endif()
 endif()
@@ -16,7 +16,35 @@ endif()
 if(XLINK_LIBUSB_LOCAL)
     add_subdirectory("${XLINK_LIBUSB_LOCAL}" "${CMAKE_CURRENT_BINARY_DIR}/libusb" EXCLUDE_FROM_ALL)
 elseif(NOT XLINK_LIBUSB_SYSTEM)
-    find_package(usb-1.0 ${_QUIET} CONFIG REQUIRED HINTS "${CMAKE_CURRENT_LIST_DIR}/libusb")
+    find_package(${XLINK_LIBUSB_TARGET} ${_QUIET} CONFIG REQUIRED HINTS "${CMAKE_CURRENT_LIST_DIR}/libusb")
+endif()
+
+if(NOT TARGET ${XLINK_LIBUSB_TARGET})
+    # create import target for libusb using vcpkg defined variables
+    add_library(${XLINK_LIBUSB_TARGET} SHARED IMPORTED)
+    if (CMAKE_IMPORT_LIBRARY_SUFFIX)
+        # split lib+sharedbin platform
+        set_target_properties(${XLINK_LIBUSB_TARGET} PROPERTIES
+            IMPORTED_LOCATION_RELEASE "${LIBUSB_INCLUDE_DIR}/../../bin/libusb-1.0.dll"
+            IMPORTED_LOCATION_DEBUG   "${LIBUSB_INCLUDE_DIR}/../../debug/bin/libusb-1.0.dll"
+            IMPORTED_IMPLIB_RELEASE   "${LIBUSB_LIBRARY_RELEASE}" #lib file
+            IMPORTED_IMPLIB_DEBUG     "${LIBUSB_LIBRARY_DEBUG}"   #lib file
+            MAP_IMPORTED_CONFIG_MINSIZEREL Release
+            MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
+        )
+    else()
+        set_target_properties(${XLINK_LIBUSB_TARGET} PROPERTIES
+            IMPORTED_LOCATION_RELEASE ${LIBUSB_LIBRARY_RELEASE}
+            IMPORTED_LOCATION_DEBUG   ${LIBUSB_LIBRARY_DEBUG}
+            MAP_IMPORTED_CONFIG_MINSIZEREL Release
+            MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
+        )
+    endif()
+    target_include_directories(${XLINK_LIBUSB_TARGET} INTERFACE
+        "${LIBUSB_INCLUDE_DIR}/.."
+        #$<BUILD_INTERFACE:${LIBUSB_INCLUDE_DIR}/..>
+        #$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
 endif()
 
 # Add threads (c++)

@@ -37,9 +37,11 @@ option(XLINK_BUILD_TESTS "Build XLink tests" OFF)
 set(XLINK_LIBUSB_LOCAL "" CACHE STRING "Path to local libub source to use instead of Hunter")
 # Debug option
 option(XLINK_LIBUSB_SYSTEM "Use system libusb library instead of Hunter" OFF)
+# Debug option
+set(XLINK_LIBUSB_CUSTOM_TARGET "" CACHE STRING "Target name for libusb used in cmake package search; when empty, 'usb-1.0' is used")
 
-if(XLINK_LIBUSB_LOCAL AND XLINK_LIBUSB_SYSTEM)
-    message(FATAL_ERROR "XLINK_LIBUSB_LOCAL and XLINK_LIBUSB_SYSTEM options are mutually exclusive!")
+if((XLINK_LIBUSB_LOCAL AND XLINK_LIBUSB_SYSTEM) OR (XLINK_LIBUSB_LOCAL AND XLINK_LIBUSB_CUSTOM_TARGET) OR (XLINK_LIBUSB_SYSTEM AND XLINK_LIBUSB_CUSTOM_TARGET))
+    message(FATAL_ERROR "XLINK_LIBUSB_LOCAL, XLINK_LIBUSB_SYSTEM, and XLINK_LIBUSB_CUSTOM_TARGET options are mutually exclusive!")
 endif()
 
 message(STATUS "Configuring XLink with the following options:")
@@ -47,6 +49,7 @@ message(STATUS "  XLINK_BUILD_EXAMPLES: ${XLINK_BUILD_EXAMPLES}")
 message(STATUS "  XLINK_BUILD_TESTS: ${XLINK_BUILD_TESTS}")
 message(STATUS "  XLINK_LIBUSB_LOCAL: ${XLINK_LIBUSB_LOCAL}")
 message(STATUS "  XLINK_LIBUSB_SYSTEM: ${XLINK_LIBUSB_SYSTEM}")
+message(STATUS "  XLINK_LIBUSB_CUSTOM_TARGET: ${XLINK_LIBUSB_CUSTOM_TARGET}")
 
 # Create library target
 add_library(${TARGET_NAME} ${XLINK_SOURCES})
@@ -54,6 +57,13 @@ add_flag_source(src/shared/XLinkDevice.c "-Werror=switch-enum")
 get_cmake_property(is_multi_config GENERATOR_IS_MULTI_CONFIG)
 if(is_multi_config)
     set_target_properties(${TARGET_NAME} PROPERTIES DEBUG_POSTFIX "d")
+endif()
+
+# Resolve libusb target
+if(XLINK_LIBUSB_CUSTOM_TARGET)
+    set(XLINK_LIBUSB_TARGET ${XLINK_LIBUSB_CUSTOM_TARGET})
+else()
+    set(XLINK_LIBUSB_TARGET "usb-1.0")
 endif()
 
 # Add dependencies
@@ -70,15 +80,26 @@ if(XLINK_LIBUSB_SYSTEM)
         PRIVATE "${LIBUSB_INCLUDE_DIR}"
     )
     target_link_libraries(${TARGET_NAME}
-        PUBLIC ${LIBUSB_LIBRARY}
+        PRIVATE ${LIBUSB_LIBRARY}
     )
 else()
     # Link to CMake libusb
-    target_link_libraries(${TARGET_NAME} PRIVATE usb-1.0)
+    target_link_libraries(${TARGET_NAME} PRIVATE ${XLINK_LIBUSB_TARGET})
     if(WIN32 AND NOT MINGW)
         target_link_libraries(${TARGET_NAME} PRIVATE delayimp.lib Pathcch.lib)
+
+        # TODO investigate rename or use DEBUG_POSTFIX
+        if (CMAKE_BUILD_TYPE)
+            string(TOUPPER "${CMAKE_BUILD_TYPE}" _UPPER_BT)
+            get_target_property(LIBUSB_DLL_PATH ${XLINK_LIBUSB_TARGET} IMPORTED_LOCATION_${_UPPER_BT})
+            unset(_UPPER_BT)
+        else()
+            get_target_property(LIBUSB_DLL_PATH ${XLINK_LIBUSB_TARGET} IMPORTED_LOCATION)
+        endif()
+        get_filename_component(LIBUSB_DLL ${LIBUSB_DLL_PATH} NAME)
+
         # workaround https://gitlab.kitware.com/cmake/cmake/-/issues/20022
-        target_link_options(${TARGET_NAME} PUBLIC "$<LINK_ONLY:/DELAYLOAD:libusb-1.0$<$<CONFIG:Debug>:d>.dll>")
+        target_link_options(${TARGET_NAME} PUBLIC "$<LINK_ONLY:/DELAYLOAD:${LIBUSB_DLL}>")
     endif()
 endif()
 
@@ -222,12 +243,22 @@ install(
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
+
 #Install include folder
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
 # Install Hunter dependencies
-if(NOT XLINK_LIBUSB_LOCAL AND NOT XLINK_LIBUSB_SYSTEM)
+if(NOT XLINK_LIBUSB_LOCAL AND NOT XLINK_LIBUSB_SYSTEM AND HUNTER_INSTALL_PREFIX)
     install(DIRECTORY "${HUNTER_INSTALL_PREFIX}/" DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}/dependencies")
 endif()
+
+install(
+    IMPORTED_RUNTIME_ARTIFACTS ${XLINK_LIBUSB_TARGET}
+    #TODO investigate RUNTIME_DEPENDENCY_SET
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+)
+
 # Install export group (information about targets)
 install(EXPORT ${PROJECT_EXPORT_GROUP}
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"

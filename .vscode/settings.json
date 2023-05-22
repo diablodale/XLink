@@ -3,6 +3,8 @@
     "cmake.parseBuildDiagnostics": true,
     "cmake.ctest.parallelJobs": 1,
     "cmake.configureSettings": {
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "XLINK_LIBUSB_CUSTOM_TARGET": "libusb", // use vcpkg libusb
         "XLINK_BUILD_TESTS": "ON",
         "XLINK_BUILD_EXAMPLES": "ON",
         "CMAKE_INSTALL_PREFIX": "${workspaceFolder}/.install/${command:cmake.buildType}",

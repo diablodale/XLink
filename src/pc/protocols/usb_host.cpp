@@ -2,7 +2,7 @@
 #define MVLOG_UNIT_NAME xLinkUsb
 
 // libraries
-#ifdef XLINK_LIBUSB_LOCAL
+#if defined(XLINK_LIBUSB_LOCAL) || defined(XLINK_LIBUSB_CUSTOM_TARGET)
 #include <libusb.h>
 #else
 #include <libusb-1.0/libusb.h>
