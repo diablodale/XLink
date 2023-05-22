@@ -1,0 +1,60 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "list_devices",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/examples/list_devices.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/examples",
+            "environment": [
+                {
+                    "name": "DEPTHAI_LEVEL",
+                    "value": "WARN"
+                },
+                {
+                    "name": "XLINK_LEVEL",
+                    "value": "fatal" // fatal
+                },
+                //{
+                //    "name": "LIBUSB_DEBUG",
+                //    "value": "3",// 0=none, 1=error, 2=warning, 3=info, 4=debug
+                //},
+                //{
+                //    "name": "DEPTHAI_SEARCH_TIMEOUT",
+                //    "value": "10000", // bug https://github.com/luxonis/depthai-core/issues/291#issuecomment-1029191915
+                //},
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "multiple_open_stream",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/tests/multiple_open_stream.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/tests",
+            "environment": [
+                {
+                    "name": "DEPTHAI_LEVEL",
+                    "value": "WARN"
+                },
+                {
+                    "name": "XLINK_LEVEL",
+                    "value": "fatal" // fatal
+                },
+                //{
+                //    "name": "DEPTHAI_SEARCH_TIMEOUT",
+                //    "value": "10000", // bug https://github.com/luxonis/depthai-core/issues/291#issuecomment-1029191915
+                //},
+            ],
+            "console": "integratedTerminal"
+        },
+    ]
+}

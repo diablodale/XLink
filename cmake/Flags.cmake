@@ -50,6 +50,7 @@ function(add_default_flags target)
     elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
         # using Visual Studio C++
         # TODO(warchant): add flags https://github.com/lefticus/cppbestpractices/blob/master/02-Use_the_Tools_Available.md#msvc
+        add_flag(${target} /W4)
     endif()
 
 endfunction()

@@ -1,0 +1,18 @@
+{
+    "cmake.configureOnOpen": false,
+    "cmake.parseBuildDiagnostics": true,
+    "cmake.ctest.parallelJobs": 1,
+    "cmake.configureSettings": {
+        "XLINK_BUILD_TESTS": "ON",
+        "XLINK_BUILD_EXAMPLES": "ON",
+        "CMAKE_INSTALL_PREFIX": "${workspaceFolder}/.install/${command:cmake.buildType}",
+    },
+    "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+    "C_Cpp.codeAnalysis.runAutomatically": true,
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.default.intelliSenseMode": "msvc-x64",
+    "C_Cpp.default.cStandard": "c11",
+    "C_Cpp.default.cppStandard": "c++14",
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+    "C_Cpp.vcpkg.enabled": true,
+}

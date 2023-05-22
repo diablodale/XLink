@@ -3,6 +3,7 @@
 # With additions of Luxonis
 
 cmake_minimum_required(VERSION 3.3)
+cmake_policy(SET CMP0092 NEW) # MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
 
 include("cmake/HunterGate.cmake")
 HunterGate(
